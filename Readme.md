@@ -4,8 +4,10 @@
 [![npm version][npm-image]][npm-url]
 [![build status][travis-image]][travis-url]
 
- Development style logger middleware for [koa](https://github.com/koajs/koa).
+ This Forks add some support for log4js-node
 
+ Development style logger middleware for [koa](https://github.com/koajs/koa).
+   
 ___Notice: `koa-logger@2` supports `koa@2`; if you want to use this module with `koa@1`, please use `koa-logger@1`.___
 
 ```
