@@ -29,25 +29,33 @@ const colorCodes = {
 }
 
 /**
- * @TODO allow log to file
  * Development logger.
  */
 
 function dev (opts) {
+
   return async function logger (ctx, next) {
     // request
     const start = Date.now()
-    console.log('  ' + chalk.gray('<--') +
-      ' ' + chalk.bold('%s') +
-      ' ' + chalk.gray('%s'),
-        ctx.method,
-        ctx.originalUrl)
+
+
+    if(isLog4jsAviable(opts)) {
+      requestBeginWriteToLog4js(opts.log4js.logger,opts.log4js.level,ctx.method, ctx.originalUrl);
+    } else {
+      requestBeginWriteToSimpleConsole(ctx.method, ctx.originalUrl);
+    }
+
 
     try {
       await next()
     } catch (err) {
       // log uncaught downstream errors
-      log(ctx, start, null, err)
+      if(isLog4jsAviable(opts)) {
+        requestEndWriteLog4js(opts.log4js.logger,opts.log4js.level,logParts(ctx, start, null, err));
+      } else {
+        requestEndWriteToSimpleConsole(logParts(ctx, start, null, err));
+      }
+
       throw err
     }
 
@@ -76,7 +84,12 @@ function dev (opts) {
     function done (event) {
       res.removeListener('finish', onfinish)
       res.removeListener('close', onclose)
-      log(ctx, start, counter ? counter.length : length, null, event)
+      if(isLog4jsAviable(opts)) {
+        requestEndWriteLog4js(opts.log4js.logger,opts.log4js.level,logParts(ctx, start, counter ? counter.length : length, null, event))
+      } else {
+        requestEndWriteToSimpleConsole(logParts(ctx, start, counter ? counter.length : length, null, event));
+      }
+
     }
   }
 }
@@ -85,16 +98,11 @@ function dev (opts) {
  * Log helper.
  */
 
-function log (ctx, start, len, err, event) {
+function logParts(ctx, start, len, err, event) {
   // get the status code of the response
   const status = err
     ? (err.status || 500)
     : (ctx.status || 404)
-
-  // set the color of the status code;
-  const s = status / 100 | 0
-  const color = colorCodes.hasOwnProperty(s) ? colorCodes[s] : 0
-
   // get the human readable response length
   let length
   if (~[204, 205, 304].indexOf(status)) {
@@ -107,19 +115,55 @@ function log (ctx, start, len, err, event) {
 
   const upstream = err ? chalk.red('xxx')
     : event === 'close' ? chalk.yellow('-x-')
-    : chalk.gray('-->')
+      : chalk.gray('-->')
 
-  console.log('  ' + upstream +
+
+  return { 'upstream': upstream,
+    'method': ctx.method,
+    'originalUrl': ctx.originalUrl,
+    'status': status,
+    'time': time(start),
+    'length': length
+  }
+}
+
+function requestBeginWriteToSimpleConsole(method,originalUrl) {
+  console.log('  ' + chalk.gray('<--') +
+    ' ' + chalk.bold('%s') +
+    ' ' + chalk.gray('%s'),
+    method,
+    originalUrl)
+}
+
+function requestEndWriteToSimpleConsole(logParts) {
+  // set the color of the status code;
+  const s = logParts['status'] / 100 | 0
+  const color = colorCodes.hasOwnProperty(s) ? colorCodes[s] : 0
+  console.log('  ' + logParts['upstream'] +
     ' ' + chalk.bold('%s') +
     ' ' + chalk.gray('%s') +
     ' ' + chalk[color]('%s') +
     ' ' + chalk.gray('%s') +
     ' ' + chalk.gray('%s'),
-      ctx.method,
-      ctx.originalUrl,
-      status,
-      time(start),
-      length)
+    logParts['method'],
+    logParts['originalUrl'],
+    logParts['status'],
+    logParts['time'],
+    logParts['length'])
+}
+
+function isLog4jsAviable(opts) {
+  return opts && opts.log4js && opts.log4js.logger && opts.log4js.level;
+}
+
+function requestBeginWriteToLog4js(logger,level,method,originalUrl) {
+  let message = method +' '+ originalUrl;
+  (logger[level])(message);
+}
+
+function requestEndWriteLog4js(logger, level, logParts) {
+  let message = logParts['method'] + ' ' + logParts['originalUrl']+ ' ' + logParts['status'] + ' ' + logParts['time']+ ' ' + logParts['length'];
+  (logger[level])(message);
 }
 
 /**
