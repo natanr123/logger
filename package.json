@@ -14,7 +14,8 @@
   ],
   "scripts": {
     "lint": "eslint --fix .",
-    "test": "mocha test.js"
+    "test": "mocha test.js",
+    "example-log4js": "node example-log4js"
   },
   "devDependencies": {
     "chai": "^3.5.0",
@@ -29,7 +30,8 @@
     "mocha": "^3.2.0",
     "sinon": "^1.17.7",
     "sinon-chai": "^2.8.0",
-    "supertest": "^2.0.1"
+    "supertest": "^2.0.1",
+    "log4js": "^2.0.0"
   },
   "license": "MIT",
   "dependencies": {
