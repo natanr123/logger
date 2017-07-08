@@ -29,6 +29,7 @@ const colorCodes = {
 }
 
 /**
+ * @TODO allow log to file
  * Development logger.
  */
 
